@@ -13,6 +13,18 @@
 #       accounting for cache hit/miss pricing. The local pricing table below
 #       is kept only as a last-resort fallback when cost.total_cost_usd is absent.
 
+# ── Configuration ─────────────────────────────────────────────────────────────
+# Ordered list of fields to display. Remove a name to hide it; reorder to change order.
+# Available: "cwd"  "branch"  "model"  "tokens"  "cost"
+$STATUSLINE_TEMPLATE  = @("cwd", "branch", "model", "tokens", "cost")
+$STATUSLINE_SEPARATOR = " "
+
+# Symbols — replace with ASCII alternatives if your terminal doesn't render Unicode
+$SYM_TOKENS_IN  = [char]0x2193   # ↓  (tokens in context window)
+$SYM_TOKENS_OUT = [char]0x2191   # ↑  (last-response output tokens)
+$SYM_COST       = "~"            # cost prefix
+# ──────────────────────────────────────────────────────────────────────────────
+
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $input_data = $input | Out-String
@@ -99,54 +111,42 @@ function Format-Tokens([long]$n) {
     return "$n"
 }
 
-# ── Build status parts ───────────────────────────────────────────────────────
-$parts = @()
+# ── Render each field ─────────────────────────────────────────────────────────
+$fields = @{}
 
-# 1. Working directory
-$parts += "${blue}${short_cwd}${reset}"
+$fields["cwd"] = "${blue}${short_cwd}${reset}"
 
-# 2. Git branch
-if ($branch) {
-    $parts += "${magenta}(${branch})${reset}"
-}
+$fields["branch"] = if ($branch) { "${magenta}(${branch})${reset}" } else { $null }
 
-# 3. Model name
-if ($model) {
-    $parts += "${orange}${model}${reset}"
-}
+$fields["model"] = if ($model) { "${orange}${model}${reset}" } else { $null }
 
-# 4. Token counts + context % (informational — see semantics note above)
 if ($null -ne $total_in -and $null -ne $total_out) {
-    $in_fmt  = Format-Tokens $total_in
-    $out_fmt = Format-Tokens $total_out
-    # "↓" = tokens in context window; "↑" = last-response output tokens
-    $token_str = "${cyan}↓${in_fmt} ↑${out_fmt}${reset}"
-    if ($null -ne $used) {
-        $token_str += " ${yellow}(${used}%)${reset}"
-    }
-    $parts += $token_str
+    $in_fmt    = Format-Tokens $total_in
+    $out_fmt   = Format-Tokens $total_out
+    $token_str = "${cyan}${SYM_TOKENS_IN} ${in_fmt} ${SYM_TOKENS_OUT} ${out_fmt}${reset}"
+    if ($null -ne $used) { $token_str += " ${yellow}(${used}%)${reset}" }
+    $fields["tokens"] = $token_str
+} else {
+    $fields["tokens"] = $null
 }
 
-# 5. Session cost
-#    Primary: cost.total_cost_usd from Claude Code (accurate, cumulative)
-#    Fallback: estimate from token counts via pricing table (rough upper-bound)
 if ($null -ne $cost_usd) {
-    # Preferred path
     $cost_val = $cost_usd
 } elseif ($null -ne $total_in -and $null -ne $total_out) {
-    # Fallback: rough estimate — may overcount due to uniform cache pricing
     $cost_val = ($total_in / 1000000) * $price_in + ($total_out / 1000000) * $price_out
 } else {
     $cost_val = $null
 }
-
 if ($null -ne $cost_val) {
-    if ($cost_val -lt 0.01) {
-        $cost_str = "<`$0.01"
-    } else {
-        $cost_str = "`$" + ("{0:F2}" -f $cost_val)
-    }
-    $parts += "${green}~${cost_str}${reset}"
+    $cost_str       = if ($cost_val -lt 0.01) { "<`$0.01" } else { "`$" + ("{0:F2}" -f $cost_val) }
+    $fields["cost"] = "${green}${SYM_COST}${cost_str}${reset}"
+} else {
+    $fields["cost"] = $null
 }
 
-Write-Host ($parts -join " ") -NoNewline
+# ── Assemble in template order ────────────────────────────────────────────────
+$parts = @(foreach ($f in $STATUSLINE_TEMPLATE) {
+    if ($fields.ContainsKey($f) -and $null -ne $fields[$f]) { $fields[$f] }
+})
+
+Write-Host ($parts -join $STATUSLINE_SEPARATOR) -NoNewline

@@ -104,10 +104,11 @@ try {
     }
 } catch {}
 
-# Helper: format large token counts as k/M
+# Helper: format large token counts as k/M (invariant culture — always uses ".")
 function Format-Tokens([long]$n) {
-    if ($n -ge 1000000) { return "{0:F1}M" -f ($n / 1000000) }
-    if ($n -ge 1000)    { return "{0:F0}k" -f ($n / 1000) }
+    $inv = [System.Globalization.CultureInfo]::InvariantCulture
+    if ($n -ge 1000000) { return ($n / 1000000).ToString("F1", $inv) + "M" }
+    if ($n -ge 1000)    { return ($n / 1000).ToString("F0", $inv) + "k" }
     return "$n"
 }
 
@@ -138,7 +139,8 @@ if ($null -ne $cost_usd) {
     $cost_val = $null
 }
 if ($null -ne $cost_val) {
-    $cost_str       = if ($cost_val -lt 0.01) { "<`$0.01" } else { "`$" + ("{0:F2}" -f $cost_val) }
+    $inv      = [System.Globalization.CultureInfo]::InvariantCulture
+    $cost_str = if ($cost_val -lt 0.01) { "<`$0.01" } else { "`$" + $cost_val.ToString("F2", $inv) }
     $fields["cost"] = "${green}${SYM_COST}${cost_str}${reset}"
 } else {
     $fields["cost"] = $null

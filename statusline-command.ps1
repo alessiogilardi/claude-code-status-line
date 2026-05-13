@@ -20,8 +20,8 @@ $STATUSLINE_TEMPLATE  = @("cwd", "branch", "model", "tokens", "cost")
 $STATUSLINE_SEPARATOR = " "
 
 # Symbols — replace with ASCII alternatives if your terminal doesn't render Unicode
-$SYM_TOKENS_IN  = [char]0x2193   # ↓  (tokens in context window)
-$SYM_TOKENS_OUT = [char]0x2191   # ↑  (last-response output tokens)
+$SYM_TOKENS_IN  = [char]0x2191   # ↑  (tokens in context window)
+$SYM_TOKENS_OUT = [char]0x2193   # ↓  (last-response output tokens)
 $SYM_COST       = "~"            # cost prefix
 # ──────────────────────────────────────────────────────────────────────────────
 

@@ -21,8 +21,8 @@ STATUSLINE_TEMPLATE=("cwd" "branch" "model" "tokens" "cost")
 STATUSLINE_SEPARATOR=" "
 
 # Symbols — replace with ASCII alternatives if your terminal doesn't render Unicode
-SYM_TOKENS_IN="↓"
-SYM_TOKENS_OUT="↑"
+SYM_TOKENS_IN="↑"
+SYM_TOKENS_OUT="↓"
 SYM_COST="~"
 # ──────────────────────────────────────────────────────────────────────────────
 

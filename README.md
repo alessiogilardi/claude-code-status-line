@@ -7,7 +7,7 @@ Two scripts are provided: one for Windows (PowerShell) and one for Linux/macOS (
 ## Preview
 
 ![Status line preview](screenshots/statusline.png)
-```
+
 
 | Color  | Field |
 |--------|-------|

@@ -1,4 +1,4 @@
-# claude-code-status-line
+# Claude Code Status Line
 
 A status line hook for [Claude Code](https://claude.ai/code) that shows working directory, git branch, model name, token counts, context usage, and session cost — updated after every turn.
 

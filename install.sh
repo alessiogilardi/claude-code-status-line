@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Installs the Claude Code status line for Linux/macOS.
-# Copies statusline-command.sh to ~/.claude/ and sets statusLine in settings.json.
+# Copies statusline-command.sh to the Claude config dir ($CLAUDE_CONFIG_DIR, default ~/.claude)
+# and sets statusLine in settings.json.
 
 set -euo pipefail
 
 SCRIPT_NAME="statusline-command.sh"
-CLAUDE_DIR="$HOME/.claude"
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 SRC_SCRIPT="$(cd "$(dirname "$0")" && pwd)/$SCRIPT_NAME"
 
@@ -37,10 +38,10 @@ echo "Copied: $DEST"
 
 # ── 3. Update settings.json (non-destructive merge) ──────────────────────────
 
-python3 - "$DEST" <<'PYEOF'
+python3 - "$DEST" "$SETTINGS_FILE" <<'PYEOF'
 import json, sys, os
 dest = sys.argv[1]
-path = os.path.join(os.path.expanduser("~"), ".claude", "settings.json")
+path = sys.argv[2]
 try:
     with open(path, encoding="utf-8") as f:
         settings = json.load(f)

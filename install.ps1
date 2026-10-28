@@ -1,12 +1,13 @@
 #Requires -Version 5.1
 # Installs the Claude Code status line for Windows.
-# Copies statusline-command.ps1 to ~/.claude/ and sets statusLine in settings.json.
+# Copies statusline-command.ps1 to the Claude config dir ($env:CLAUDE_CONFIG_DIR, default ~/.claude)
+# and sets statusLine in settings.json.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $scriptName   = "statusline-command.ps1"
-$claudeDir    = Join-Path $env:USERPROFILE ".claude"
+$claudeDir    = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $env:USERPROFILE ".claude" }
 $settingsFile = Join-Path $claudeDir "settings.json"
 
 # ── 1. Prerequisites ─────────────────────────────────────────────────────────

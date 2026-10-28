@@ -53,8 +53,8 @@ Restart Claude Code. On first launch you may be prompted to trust the status lin
 ---
 
 Both installers:
-1. Copy the script to `~/.claude/`
-2. Write the `statusLine` key in `~/.claude/settings.json` (non-destructive — all existing settings are preserved)
+1. Copy the script to the Claude config directory (`$CLAUDE_CONFIG_DIR` if set, otherwise `~/.claude/`)
+2. Write the `statusLine` key in that directory's `settings.json` (non-destructive — all existing settings are preserved)
 
 ### Manual installation
 

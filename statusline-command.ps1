@@ -1,5 +1,5 @@
 # Claude Code status line command (PowerShell)
-# Displays: cwd | git branch | model | context used % | tokens in/out | session cost
+# Displays: cwd | git branch | model | context used % | tokens in/out | cache hit % | session cost
 #
 # TOKEN SEMANTICS (as of Claude Code v2.1.132):
 #   context_window.total_input_tokens  = token currently IN the context window
@@ -15,13 +15,14 @@
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 # Ordered list of fields to display. Remove a name to hide it; reorder to change order.
-# Available: "cwd"  "branch"  "model"  "tokens"  "cost"
-$STATUSLINE_TEMPLATE  = @("cwd", "branch", "model", "tokens", "cost")
+# Available: "cwd"  "branch"  "model"  "tokens"  "cache"  "cost"
+$STATUSLINE_TEMPLATE  = @("cwd", "branch", "model", "tokens", "cache", "cost")
 $STATUSLINE_SEPARATOR = " "
 
 # Symbols — replace with ASCII alternatives if your terminal doesn't render Unicode
 $SYM_TOKENS_IN  = [char]0x2191   # ↑  (tokens in context window)
 $SYM_TOKENS_OUT = [char]0x2193   # ↓  (last-response output tokens)
+$LABEL_CACHE    = "hit"          # cache hit % suffix
 $SYM_COST       = "~"            # cost prefix
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,17 @@ $model_id = if ($json.model.id)              { $json.model.id }              els
 $used     = if ($null -ne $json.context_window.used_percentage) { $json.context_window.used_percentage } else { $null }
 $total_in  = if ($null -ne $json.context_window.total_input_tokens)  { $json.context_window.total_input_tokens }  else { $null }
 $total_out = if ($null -ne $json.context_window.total_output_tokens) { $json.context_window.total_output_tokens } else { $null }
+
+# Cache hit %: prompt_cache.hit_ratio (session-level, Claude Code >= 2.1.251);
+# fallback: cache_read / (input + cache_creation + cache_read) of the last API call
+$cache_pct = $null
+$cu = $json.context_window.current_usage
+if ($null -ne $json.prompt_cache.hit_ratio) {
+    $cache_pct = [math]::Round([double]$json.prompt_cache.hit_ratio * 100)
+} elseif ($null -ne $cu) {
+    $cu_total = [double]$cu.input_tokens + [double]$cu.cache_creation_input_tokens + [double]$cu.cache_read_input_tokens
+    if ($cu_total -gt 0) { $cache_pct = [math]::Round([double]$cu.cache_read_input_tokens * 100 / $cu_total) }
+}
 
 # Primary cost source: provided by Claude Code (correct, accounts for cache pricing)
 $cost_usd = if ($null -ne $json.cost.total_cost_usd) { [double]$json.cost.total_cost_usd } else { $null }
@@ -130,6 +142,8 @@ if ($null -ne $total_in -and $null -ne $total_out) {
 } else {
     $fields["tokens"] = $null
 }
+
+$fields["cache"] = if ($null -ne $cache_pct) { "${green}${cache_pct}% ${LABEL_CACHE}${reset}" } else { $null }
 
 if ($null -ne $cost_usd) {
     $cost_val = $cost_usd

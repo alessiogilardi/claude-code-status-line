@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Claude Code status line command (Bash)
-# Displays: cwd | git branch | model | context used % | tokens in/out | session cost
+# Displays: cwd | git branch | model | context used % | tokens in/out | cache hit % | session cost
 #
 # TOKEN SEMANTICS (as of Claude Code v2.1.132):
 #   context_window.total_input_tokens  = tokens currently IN the context window
@@ -10,19 +10,24 @@
 #                                        NOT cumulative
 #   context_window.used_percentage     = calculated from input tokens only (no output)
 #
+# CACHE HIT %: prompt_cache.hit_ratio (session-level, Claude Code >= 2.1.251).
+#   Fallback when absent: context_window.current_usage (last API call) —
+#   cache_read / (input + cache_creation + cache_read)
+#
 # COST: always use cost.total_cost_usd — Claude Code computes it correctly,
 #       accounting for cache hit/miss pricing. The local pricing table below
 #       is kept only as a last-resort fallback when cost.total_cost_usd is absent.
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 # Ordered list of fields to display. Remove a name to hide it; reorder to change order.
-# Available: "cwd"  "branch"  "model"  "tokens"  "cost"
-STATUSLINE_TEMPLATE=("cwd" "branch" "model" "tokens" "cost")
+# Available: "cwd"  "branch"  "model"  "tokens"  "cache"  "cost"
+STATUSLINE_TEMPLATE=("cwd" "branch" "model" "tokens" "cache" "cost")
 STATUSLINE_SEPARATOR=" "
 
 # Symbols — replace with ASCII alternatives if your terminal doesn't render Unicode
 SYM_TOKENS_IN="↑"
 SYM_TOKENS_OUT="↓"
+LABEL_CACHE="hit"
 SYM_COST="~"
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -36,6 +41,7 @@ if command -v jq >/dev/null 2>&1; then
     used=$(     echo "$input" | jq -r 'if .context_window.used_percentage      != null then (.context_window.used_percentage|tostring)      else "" end')
     total_in=$( echo "$input" | jq -r 'if .context_window.total_input_tokens   != null then (.context_window.total_input_tokens|tostring)   else "" end')
     total_out=$(echo "$input" | jq -r 'if .context_window.total_output_tokens  != null then (.context_window.total_output_tokens|tostring)  else "" end')
+    cache_pct=$(echo "$input" | jq -r 'if .prompt_cache.hit_ratio != null then (.prompt_cache.hit_ratio * 100 | round | tostring) elif .context_window.current_usage != null then (.context_window.current_usage as $u | (($u.input_tokens // 0) + ($u.cache_creation_input_tokens // 0) + ($u.cache_read_input_tokens // 0)) as $t | if $t > 0 then ((($u.cache_read_input_tokens // 0) * 100 / $t) | round | tostring) else "" end) else "" end')
     cost_usd=$( echo "$input" | jq -r 'if .cost.total_cost_usd                 != null then (.cost.total_cost_usd|tostring)                 else "" end')
 elif command -v python3 >/dev/null 2>&1; then
     eval "$(echo "$input" | python3 -c "
@@ -45,6 +51,13 @@ ws = d.get('workspace') or {}
 cw = d.get('context_window') or {}
 mo = d.get('model') or {}
 co = d.get('cost') or {}
+cu = cw.get('current_usage') or {}
+cu_total = sum(cu.get(k) or 0 for k in ('input_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens'))
+pc = d.get('prompt_cache') or {}
+if pc.get('hit_ratio') is not None:
+    cache_pct = str(round(pc['hit_ratio'] * 100))
+else:
+    cache_pct = str(round((cu.get('cache_read_input_tokens') or 0) * 100 / cu_total)) if cu_total > 0 else ''
 for k, v in [
     ('cwd',       ws.get('current_dir') or d.get('cwd') or ''),
     ('model',     mo.get('display_name') or ''),
@@ -52,6 +65,7 @@ for k, v in [
     ('used',      '' if cw.get('used_percentage')      is None else str(cw['used_percentage'])),
     ('total_in',  '' if cw.get('total_input_tokens')   is None else str(cw['total_input_tokens'])),
     ('total_out', '' if cw.get('total_output_tokens')  is None else str(cw['total_output_tokens'])),
+    ('cache_pct', cache_pct),
     ('cost_usd',  '' if co.get('total_cost_usd')       is None else str(co['total_cost_usd'])),
 ]:
     print(f'{k}={shlex.quote(v)}')
@@ -129,6 +143,12 @@ else
     _f_tokens=""
 fi
 
+if [ -n "$cache_pct" ]; then
+    _f_cache="${green}${cache_pct}% ${LABEL_CACHE}${reset}"
+else
+    _f_cache=""
+fi
+
 if [ -n "$cost_usd" ]; then
     cost_val="$cost_usd"
 elif [ -n "$total_in" ] && [ -n "$total_out" ]; then
@@ -156,6 +176,7 @@ for field in "${STATUSLINE_TEMPLATE[@]}"; do
         branch) val="$_f_branch" ;;
         model)  val="$_f_model" ;;
         tokens) val="$_f_tokens" ;;
+        cache)  val="$_f_cache" ;;
         cost)   val="$_f_cost" ;;
         *)      val="" ;;
     esac

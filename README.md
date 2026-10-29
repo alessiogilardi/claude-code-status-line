@@ -14,6 +14,7 @@ Two scripts are provided: one for Windows (PowerShell) and one for Linux/macOS (
 | Blue   | Working directory (home shortened to `~`) |
 | Magenta | Git branch |
 | Orange | Model name |
+| Grey   | Reasoning effort next to the model: `L` · `M` · `H` · `XH` · `MAX` (hidden if the model has no effort setting) |
 | Cyan   | Token counts: ↑ tokens in context window · ↓ last-response output tokens |
 | Yellow | Context window usage % |
 | Green  | Cache hit rate (`N% hit`) · cumulative session cost |

@@ -26,6 +26,7 @@ Claude Code pipes a JSON object to stdin. The fields used by these scripts:
 | `context_window.total_input_tokens` | number | Tokens currently in context (not cumulative) |
 | `context_window.total_output_tokens` | number | Last-response output tokens (not cumulative) |
 | `context_window.remaining_percentage` | number | Remaining context % (used by the `.sh` script) |
+| `effort.level` | string | `low`/`medium`/`high`/`xhigh`/`max`; absent if the model has no effort parameter; shown in grey as L/M/H/XH/MAX |
 | `prompt_cache.hit_ratio` | number 0–1 | Session-level cache read / all input tokens (Claude Code ≥ 2.1.251); preferred for the cache hit % |
 | `context_window.current_usage.*` | object | Last API call: `input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`; fallback cache hit % = read / (input + creation + read); null before first call and after `/compact` |
 | `cost.total_cost_usd` | number | Cumulative session cost; preferred over local estimate |
@@ -48,4 +49,4 @@ The fallback pricing table in the `.ps1` script must be kept in sync with Anthro
 
 Both scripts output ANSI-coloured text with no trailing newline. Fields are space-separated. The `.ps1` script uses `Write-Host … -NoNewline`; the `.sh` script uses `printf '%s'`.
 
-Colour assignments (`.ps1`): blue = cwd, magenta = branch, orange = model, cyan = tokens, yellow = ctx %, green = cache hit % and cost.
+Colour assignments (`.ps1`): blue = cwd, magenta = branch, orange = model, grey = effort, cyan = tokens, yellow = ctx %, green = cache hit % and cost.

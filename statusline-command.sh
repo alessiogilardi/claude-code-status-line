@@ -10,6 +10,9 @@
 #                                        NOT cumulative
 #   context_window.used_percentage     = calculated from input tokens only (no output)
 #
+# EFFORT: effort.level (low|medium|high|xhigh|max) shown in grey next to the model
+#   as L/M/H/XH/MAX; absent when the model does not support the effort parameter.
+#
 # CACHE HIT %: prompt_cache.hit_ratio (session-level, Claude Code >= 2.1.251).
 #   Fallback when absent: context_window.current_usage (last API call) —
 #   cache_read / (input + cache_creation + cache_read)
@@ -38,6 +41,7 @@ if command -v jq >/dev/null 2>&1; then
     cwd=$(      echo "$input" | jq -r '.workspace.current_dir // .cwd // ""')
     model=$(    echo "$input" | jq -r '.model.display_name // ""')
     model_id=$( echo "$input" | jq -r '.model.id // ""')
+    effort=$(   echo "$input" | jq -r '.effort.level // ""')
     used=$(     echo "$input" | jq -r 'if .context_window.used_percentage      != null then (.context_window.used_percentage|tostring)      else "" end')
     total_in=$( echo "$input" | jq -r 'if .context_window.total_input_tokens   != null then (.context_window.total_input_tokens|tostring)   else "" end')
     total_out=$(echo "$input" | jq -r 'if .context_window.total_output_tokens  != null then (.context_window.total_output_tokens|tostring)  else "" end')
@@ -51,6 +55,7 @@ ws = d.get('workspace') or {}
 cw = d.get('context_window') or {}
 mo = d.get('model') or {}
 co = d.get('cost') or {}
+ef = d.get('effort') or {}
 cu = cw.get('current_usage') or {}
 cu_total = sum(cu.get(k) or 0 for k in ('input_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens'))
 pc = d.get('prompt_cache') or {}
@@ -62,6 +67,7 @@ for k, v in [
     ('cwd',       ws.get('current_dir') or d.get('cwd') or ''),
     ('model',     mo.get('display_name') or ''),
     ('model_id',  mo.get('id') or ''),
+    ('effort',    ef.get('level') or ''),
     ('used',      '' if cw.get('used_percentage')      is None else str(cw['used_percentage'])),
     ('total_in',  '' if cw.get('total_input_tokens')   is None else str(cw['total_input_tokens'])),
     ('total_out', '' if cw.get('total_output_tokens')  is None else str(cw['total_output_tokens'])),
@@ -113,6 +119,7 @@ reset=$'\e[0m'
 blue=$'\e[34m'
 magenta=$'\e[35m'
 orange=$'\e[38;5;214m'
+grey=$'\e[90m'
 yellow=$'\e[33m'
 cyan=$'\e[36m'
 green=$'\e[32m'
@@ -128,6 +135,15 @@ fi
 
 if [ -n "$model" ]; then
     _f_model="${orange}${model}${reset}"
+    case "$effort" in
+        low)    effort_abbr="L"   ;;
+        medium) effort_abbr="M"   ;;
+        high)   effort_abbr="H"   ;;
+        xhigh)  effort_abbr="XH"  ;;
+        max)    effort_abbr="MAX" ;;
+        *)      effort_abbr=""    ;;
+    esac
+    [ -n "$effort_abbr" ] && _f_model="${_f_model} ${grey}${effort_abbr}${reset}"
 else
     _f_model=""
 fi

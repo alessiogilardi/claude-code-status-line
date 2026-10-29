@@ -34,6 +34,7 @@ $json = $input_data | ConvertFrom-Json
 $cwd      = if ($json.workspace.current_dir) { $json.workspace.current_dir } elseif ($json.cwd) { $json.cwd } else { "" }
 $model    = if ($json.model.display_name)    { $json.model.display_name }    else { "" }
 $model_id = if ($json.model.id)              { $json.model.id }              else { "" }
+$effort   = if ($json.effort.level)          { $json.effort.level }          else { "" }
 $used     = if ($null -ne $json.context_window.used_percentage) { $json.context_window.used_percentage } else { $null }
 $total_in  = if ($null -ne $json.context_window.total_input_tokens)  { $json.context_window.total_input_tokens }  else { $null }
 $total_out = if ($null -ne $json.context_window.total_output_tokens) { $json.context_window.total_output_tokens } else { $null }
@@ -62,6 +63,7 @@ $reset   = "$esc[0m"
 $blue    = "$esc[34m"
 $magenta = "$esc[35m"
 $orange  = "$esc[38;5;214m"
+$grey    = "$esc[90m"
 $yellow  = "$esc[33m"
 $cyan    = "$esc[36m"
 $green   = "$esc[32m"
@@ -131,7 +133,19 @@ $fields["cwd"] = "${blue}${short_cwd}${reset}"
 
 $fields["branch"] = if ($branch) { "${magenta}(${branch})${reset}" } else { $null }
 
-$fields["model"] = if ($model) { "${orange}${model}${reset}" } else { $null }
+$effort_abbr = switch ($effort) {
+    "low"    { "L" }
+    "medium" { "M" }
+    "high"   { "H" }
+    "xhigh"  { "XH" }
+    "max"    { "MAX" }
+    default  { "" }
+}
+$fields["model"] = if ($model) {
+    $m = "${orange}${model}${reset}"
+    if ($effort_abbr) { $m += " ${grey}${effort_abbr}${reset}" }
+    $m
+} else { $null }
 
 if ($null -ne $total_in -and $null -ne $total_out) {
     $in_fmt    = Format-Tokens $total_in

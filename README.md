@@ -1,6 +1,6 @@
 # Claude Code Status Line
 
-A status line hook for [Claude Code](https://claude.ai/code) that shows working directory, git branch, model name, token counts, context usage, and session cost — updated after every turn.
+A status line hook for [Claude Code](https://claude.ai/code) that shows working directory, git branch, model name, token counts, context usage, cache hit rate, and session cost — updated after every turn.
 
 Two scripts are provided: one for Windows (PowerShell) and one for Linux/macOS (Bash).
 
@@ -16,7 +16,7 @@ Two scripts are provided: one for Windows (PowerShell) and one for Linux/macOS (
 | Orange | Model name |
 | Cyan   | Token counts: ↑ tokens in context window · ↓ last-response output tokens |
 | Yellow | Context window usage % |
-| Green  | Cumulative session cost |
+| Green  | Cache hit rate (`N% hit`) · cumulative session cost |
 
 <!-- TODO: add screenshots here -->
 <!-- Suggested shots:
@@ -98,7 +98,7 @@ STATUSLINE_TEMPLATE=("cwd" "branch" "model" "cost")
 $STATUSLINE_TEMPLATE = @("cwd", "branch", "model", "cost", "tokens")
 ```
 
-Available fields: `cwd` · `branch` · `model` · `tokens` · `cost`
+Available fields: `cwd` · `branch` · `model` · `tokens` · `cache` · `cost`
 
 ### Change the separator
 
@@ -138,6 +138,10 @@ Claude Code invokes the configured `statusLine` command at the end of every turn
 | `↑` (input) | Tokens **currently in the context window** — input + cache creation + cache reads. Not a cumulative session total. |
 | `↓` (output) | Output tokens from the **last response only**. Not cumulative. |
 | `(%)` | Context window usage, calculated from input tokens only. |
+
+### Cache hit rate
+
+`N% hit` is the session-level cache hit ratio, `prompt_cache.hit_ratio` (Claude Code ≥ 2.1.251). On older versions it falls back to `cache_read / (input + cache_creation + cache_read)` for the **last API call**, from `context_window.current_usage`. It is hidden until the first API call of the session.
 
 ### Cost
 
